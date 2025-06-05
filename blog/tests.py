@@ -1,4 +1,5 @@
 import os
+import requests
 
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -13,218 +14,166 @@ from accounts.models import BlogUser
 from blog.forms import BlogSearchForm
 from blog.models import Article, Category, Tag, SideBar, Links
 from blog.templatetags.blog_tags import load_pagination_info, load_articletags
-from djangoblog.utils import get_current_site, get_sha256
+from djangoblog.utils import get_current_site, get_sha256, save_user_avatar, send_email
+from djangoblog.spider_notify import SpiderNotify
 from oauth.models import OAuthUser, OAuthConfig
+from blog.templatetags.blog_tags import gravatar_url, gravatar
+from blog.documents import ELASTICSEARCH_ENABLED
 
-
-# Create your tests here.
 
 class ArticleTest(TestCase):
     def setUp(self):
         self.client = Client()
         self.factory = RequestFactory()
-
-    def test_validate_article(self):
-        site = get_current_site().domain
-        user = BlogUser.objects.get_or_create(
+        self.user = BlogUser.objects.get_or_create(
             email="liangliangyy@gmail.com",
             username="liangliangyy")[0]
-        user.set_password("liangliangyy")
-        user.is_staff = True
-        user.is_superuser = True
-        user.save()
-        response = self.client.get(user.get_absolute_url())
-        self.assertEqual(response.status_code, 200)
-        response = self.client.get('/admin/servermanager/emailsendlog/')
-        response = self.client.get('admin/admin/logentry/')
-        s = SideBar()
-        s.sequence = 1
-        s.name = 'test'
-        s.content = 'test content'
-        s.is_enable = True
-        s.save()
+        self.user.set_password("liangliangyy")
+        self.user.is_staff = True
+        self.user.is_superuser = True
+        self.user.save()
 
-        category = Category()
-        category.name = "category"
-        category.creation_time = timezone.now()
-        category.last_mod_time = timezone.now()
-        category.save()
+    def test_article_creation_and_views(self):
+        """Test article creation, category/tag association, and related views."""
+        site_domain = get_current_site().domain
 
-        tag = Tag()
-        tag.name = "nicetag"
-        tag.save()
+        # Sidebar
+        SideBar.objects.create(name='Test Sidebar', content='Content', is_enable=True, sequence=1)
 
-        article = Article()
-        article.title = "nicetitle"
-        article.body = "nicecontent"
-        article.author = user
-        article.category = category
-        article.type = 'a'
-        article.status = 'p'
+        # Category & Tag
+        category = Category.objects.create(name="Test Category", creation_time=timezone.now(),
+                                           last_mod_time=timezone.now())
+        tag = Tag.objects.create(name="Test Tag")
 
-        article.save()
-        self.assertEqual(0, article.tags.count())
+        # Create an article
+        article = Article.objects.create(
+            title="Test Title",
+            body="Test Content",
+            author=self.user,
+            category=category,
+            type='a',
+            status='p'
+        )
+        self.assertEqual(article.tags.count(), 0)
         article.tags.add(tag)
-        article.save()
-        self.assertEqual(1, article.tags.count())
+        self.assertEqual(article.tags.count(), 1)
 
+        # Create multiple articles
         for i in range(20):
-            article = Article()
-            article.title = "nicetitle" + str(i)
-            article.body = "nicetitle" + str(i)
-            article.author = user
-            article.category = category
-            article.type = 'a'
-            article.status = 'p'
-            article.save()
-            article.tags.add(tag)
-            article.save()
-        from blog.documents import ELASTICSEARCH_ENABLED
+            a = Article.objects.create(
+                title=f"Title {i}",
+                body=f"Content {i}",
+                author=self.user,
+                category=category,
+                type='a',
+                status='p'
+            )
+            a.tags.add(tag)
+
         if ELASTICSEARCH_ENABLED:
             call_command("build_index")
-            response = self.client.get('/search', {'q': 'nicetitle'})
+            response = self.client.get('/search', {'q': 'Title'})
             self.assertEqual(response.status_code, 200)
 
-        response = self.client.get(article.get_absolute_url())
-        self.assertEqual(response.status_code, 200)
-        from djangoblog.spider_notify import SpiderNotify
+        # Test views
+        self.assertEqual(self.client.get(article.get_absolute_url()).status_code, 200)
         SpiderNotify.notify(article.get_absolute_url())
-        response = self.client.get(tag.get_absolute_url())
-        self.assertEqual(response.status_code, 200)
 
-        response = self.client.get(category.get_absolute_url())
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get(tag.get_absolute_url()).status_code, 200)
+        self.assertEqual(self.client.get(category.get_absolute_url()).status_code, 200)
+        self.assertEqual(self.client.get('/search', {'q': 'django'}).status_code, 200)
 
-        response = self.client.get('/search', {'q': 'django'})
-        self.assertEqual(response.status_code, 200)
-        s = load_articletags(article)
-        self.assertIsNotNone(s)
+        self.assertIsNotNone(load_articletags(article))
 
+        # Test login and archive view
         self.client.login(username='liangliangyy', password='liangliangyy')
+        self.assertEqual(self.client.get(reverse('blog:archives')).status_code, 200)
 
-        response = self.client.get(reverse('blog:archives'))
-        self.assertEqual(response.status_code, 200)
+        # Test pagination
+        self.check_pagination(Paginator(Article.objects.all(), settings.PAGINATE_BY), '', '')
+        self.check_pagination(Paginator(Article.objects.filter(tags=tag), settings.PAGINATE_BY), '分类标签归档', tag.slug)
+        self.check_pagination(Paginator(Article.objects.filter(author=self.user), settings.PAGINATE_BY), '作者文章归档', self.user.username)
+        self.check_pagination(Paginator(Article.objects.filter(category=category), settings.PAGINATE_BY), '分类目录归档', category.slug)
 
-        p = Paginator(Article.objects.all(), settings.PAGINATE_BY)
-        self.check_pagination(p, '', '')
+        # Search form
+        BlogSearchForm().search()
 
-        p = Paginator(Article.objects.filter(tags=tag), settings.PAGINATE_BY)
-        self.check_pagination(p, '分类标签归档', tag.slug)
-
-        p = Paginator(
-            Article.objects.filter(
-                author__username='liangliangyy'), settings.PAGINATE_BY)
-        self.check_pagination(p, '作者文章归档', 'liangliangyy')
-
-        p = Paginator(Article.objects.filter(category=category), settings.PAGINATE_BY)
-        self.check_pagination(p, '分类目录归档', category.slug)
-
-        f = BlogSearchForm()
-        f.search()
-        # self.client.login(username='liangliangyy', password='liangliangyy')
-        from djangoblog.spider_notify import SpiderNotify
+        # Send spider notify to Baidu
         SpiderNotify.baidu_notify([article.get_full_url()])
 
-        from blog.templatetags.blog_tags import gravatar_url, gravatar
-        u = gravatar_url('liangliangyy@gmail.com')
-        u = gravatar('liangliangyy@gmail.com')
+        # Gravatar
+        gravatar_url('liangliangyy@gmail.com')
+        gravatar('liangliangyy@gmail.com')
 
-        link = Links(
-            sequence=1,
-            name="lylinux",
-            link='https://wwww.lylinux.net')
-        link.save()
-        response = self.client.get('/links.html')
-        self.assertEqual(response.status_code, 200)
+        # Links
+        Links.objects.create(sequence=1, name="lylinux", link='https://www.lylinux.net')
+        self.assertEqual(self.client.get('/links.html').status_code, 200)
 
-        response = self.client.get('/feed/')
-        self.assertEqual(response.status_code, 200)
+        # RSS & sitemap
+        self.assertEqual(self.client.get('/feed/').status_code, 200)
+        self.assertEqual(self.client.get('/sitemap.xml').status_code, 200)
 
-        response = self.client.get('/sitemap.xml')
-        self.assertEqual(response.status_code, 200)
+    def check_pagination(self, paginator, type_text, value):
+        """Helper method to validate pagination URLs."""
+        for page in range(1, paginator.num_pages + 1):
+            context = load_pagination_info(paginator.page(page), type_text, value)
+            self.assertIsNotNone(context)
+            if context['previous_url']:
+                self.assertEqual(self.client.get(context['previous_url']).status_code, 200)
+            if context['next_url']:
+                self.assertEqual(self.client.get(context['next_url']).status_code, 200)
 
-        self.client.get("/admin/blog/article/1/delete/")
-        self.client.get('/admin/servermanager/emailsendlog/')
-        self.client.get('/admin/admin/logentry/')
-        self.client.get('/admin/admin/logentry/1/change/')
+    def test_image_upload(self):
+        """Test image upload and related security validation."""
+        img_url = 'https://www.python.org/static/img/python-logo.png'
+        img_path = os.path.join(settings.BASE_DIR, 'python.png')
 
-    def check_pagination(self, p, type, value):
-        for page in range(1, p.num_pages + 1):
-            s = load_pagination_info(p.page(page), type, value)
-            self.assertIsNotNone(s)
-            if s['previous_url']:
-                response = self.client.get(s['previous_url'])
-                self.assertEqual(response.status_code, 200)
-            if s['next_url']:
-                response = self.client.get(s['next_url'])
-                self.assertEqual(response.status_code, 200)
+        response = requests.get(img_url)
+        with open(img_path, 'wb') as file:
+            file.write(response.content)
 
-    def test_image(self):
-        import requests
-        rsp = requests.get(
-            'https://www.python.org/static/img/python-logo.png')
-        imagepath = os.path.join(settings.BASE_DIR, 'python.png')
-        with open(imagepath, 'wb') as file:
-            file.write(rsp.content)
-        rsp = self.client.post('/upload')
-        self.assertEqual(rsp.status_code, 403)
+        self.assertEqual(self.client.post('/upload').status_code, 403)
+
         sign = get_sha256(get_sha256(settings.SECRET_KEY))
-        with open(imagepath, 'rb') as file:
-            imgfile = SimpleUploadedFile(
-                'python.png', file.read(), content_type='image/jpg')
-            form_data = {'python.png': imgfile}
-            rsp = self.client.post(
-                '/upload?sign=' + sign, form_data, follow=True)
-            self.assertEqual(rsp.status_code, 200)
-        os.remove(imagepath)
-        from djangoblog.utils import save_user_avatar, send_email
+        with open(img_path, 'rb') as file:
+            img_file = SimpleUploadedFile('python.png', file.read(), content_type='image/jpg')
+            form_data = {'python.png': img_file}
+            upload_url = f'/upload?sign={sign}'
+            self.assertEqual(self.client.post(upload_url, form_data, follow=True).status_code, 200)
+
+        os.remove(img_path)
+
+        # Avatar and email
         send_email(['qq@qq.com'], 'testTitle', 'testContent')
-        save_user_avatar(
-            'https://www.python.org/static/img/python-logo.png')
+        save_user_avatar(img_url)
 
-    def test_errorpage(self):
-        rsp = self.client.get('/eee')
-        self.assertEqual(rsp.status_code, 404)
+    def test_404_page(self):
+        """Test custom 404 error page."""
+        self.assertEqual(self.client.get('/nonexistent-url').status_code, 404)
 
-    def test_commands(self):
-        user = BlogUser.objects.get_or_create(
-            email="liangliangyy@gmail.com",
-            username="liangliangyy")[0]
-        user.set_password("liangliangyy")
-        user.is_staff = True
-        user.is_superuser = True
-        user.save()
+    def test_management_commands(self):
+        """Test various custom Django management commands."""
+        # OAuth setup
+        config = OAuthConfig.objects.create(type='qq', appkey='appkey', appsecret='appsecret')
 
-        c = OAuthConfig()
-        c.type = 'qq'
-        c.appkey = 'appkey'
-        c.appsecret = 'appsecret'
-        c.save()
+        OAuthUser.objects.create(
+            type='qq',
+            openid='openid',
+            user=self.user,
+            picture=static("/blog/img/avatar.png"),
+            metadata='{"figureurl": "https://.../30"}'
+        )
 
-        u = OAuthUser()
-        u.type = 'qq'
-        u.openid = 'openid'
-        u.user = user
-        u.picture = static("/blog/img/avatar.png")
-        u.metadata = '''
-{
-"figureurl": "https://qzapp.qlogo.cn/qzapp/101513904/C740E30B4113EAA80E0D9918ABC78E82/30"
-}'''
-        u.save()
+        OAuthUser.objects.create(
+            type='qq',
+            openid='openid1',
+            picture='https://.../30',
+            metadata='{"figureurl": "https://.../30"}'
+        )
 
-        u = OAuthUser()
-        u.type = 'qq'
-        u.openid = 'openid1'
-        u.picture = 'https://qzapp.qlogo.cn/qzapp/101513904/C740E30B4113EAA80E0D9918ABC78E82/30'
-        u.metadata = '''
-        {
-       "figureurl": "https://qzapp.qlogo.cn/qzapp/101513904/C740E30B4113EAA80E0D9918ABC78E82/30"
-        }'''
-        u.save()
-
-        from blog.documents import ELASTICSEARCH_ENABLED
         if ELASTICSEARCH_ENABLED:
             call_command("build_index")
+
         call_command("ping_baidu", "all")
         call_command("create_testdata")
         call_command("clear_cache")

@@ -26,7 +26,7 @@
         </div>
         <p>
             {% if comment_item.parent_comment %}
-                <div>回复 <a
+                <div>Reply <a
                         href="#comment-{{ comment_item.parent_comment.pk }}">@{{ comment_item.parent_comment.author.username }}</a>
                 </div>
             {% endif %}
@@ -35,9 +35,9 @@
         <p>{{ comment_item.body|escape|comment_markdown }}</p>
 
         <div class="reply"><a rel="nofollow" class="comment-reply-link"
-                              href="javascript:void(0)" data-pk="{{ comment_item.pk }}"
-                              aria-label="回复给{{ comment_item.author.username }}">回复</a></div>
-    </div>
+            href="javascript:void(0)" data-pk="{{ comment_item.pk }}"
+            aria-label="Reply to {{ comment_item.author.username }}">Reply</a></div>
+        </div>
 
 </li><!-- #comment-## -->
 {% query article_comments parent_comment=comment_item as cc_comments %}

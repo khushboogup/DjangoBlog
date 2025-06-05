@@ -69,12 +69,12 @@ def cache_decorator(expiration=3 * 60):
 
 def expire_view_cache(path, servername, serverport, key_prefix=None):
     '''
-    刷新视图缓存
-    :param path:url路径
-    :param servername:host
-    :param serverport:端口
-    :param key_prefix:前缀
-    :return:是否成功
+    Refresh view cache
+    :param path: URL path
+    :param servername: host
+    :param serverport: port
+    :param key_prefix: prefix
+    :return: success status
     '''
     from django.http import HttpRequest
     from django.utils.cache import get_cache_key
@@ -134,7 +134,7 @@ def send_email(emailto, title, content):
 
 
 def generate_code() -> str:
-    """生成随机数验证码"""
+    """Generate random verification code"""
     return ''.join(random.sample(string.digits, 6))
 
 
@@ -154,8 +154,8 @@ def get_blog_setting():
         if not BlogSettings.objects.count():
             setting = BlogSettings()
             setting.site_name = 'djangoblog'
-            setting.site_description = '基于Django的博客系统'
-            setting.site_seo_description = '基于Django的博客系统'
+            setting.site_description = 'Blog system based on Django'
+            setting.site_seo_description = 'Blog system based on Django'
             setting.site_keywords = 'Django,Python'
             setting.article_sub_length = 300
             setting.sidebar_article_count = 10
@@ -175,9 +175,9 @@ def get_blog_setting():
 
 def save_user_avatar(url):
     '''
-    保存用户头像
-    :param url:头像url
-    :return: 本地路径
+    Save user avatar
+    :param url: avatar URL
+    :return: local path
     '''
     logger.info(url)
 
@@ -192,7 +192,7 @@ def save_user_avatar(url):
             isimage = len([i for i in image_extensions if url.endswith(i)]) > 0
             ext = os.path.splitext(url)[1] if isimage else '.jpg'
             save_filename = str(uuid.uuid4().hex) + ext
-            logger.info('保存用户头像:' + basedir + save_filename)
+            logger.info('Saving user avatar:' + basedir + save_filename)
             with open(os.path.join(basedir, save_filename), 'wb+') as file:
                 file.write(rsp.content)
             return static('avatar/' + save_filename)

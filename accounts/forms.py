@@ -53,17 +53,17 @@ class ForgetPasswordForm(forms.Form):
     )
 
     new_password2 = forms.CharField(
-        label="确认密码",
+        label="Confirm Password",
         widget=forms.PasswordInput(
             attrs={
                 "class": "form-control",
-                'placeholder': _("Confirm password")
+                'placeholder': _("Confirm Password")
             }
         ),
     )
 
     email = forms.EmailField(
-        label='邮箱',
+        label='Email',
         widget=forms.TextInput(
             attrs={
                 'class': 'form-control',

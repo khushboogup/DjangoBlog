@@ -66,7 +66,7 @@ def comment_markdown(content):
 @stringfilter
 def truncatechars_content(content):
     """
-    获得文章内容的摘要
+    Get a summary of the article content
     :param content:
     :return:
     """
@@ -87,7 +87,7 @@ def truncate(content):
 @register.inclusion_tag('blog/tags/breadcrumb.html')
 def load_breadcrumb(article):
     """
-    获得文章面包屑
+    Get article breadcrumb
     :param article:
     :return:
     """
@@ -108,7 +108,7 @@ def load_breadcrumb(article):
 @register.inclusion_tag('blog/tags/article_tag_list.html')
 def load_articletags(article):
     """
-    文章标签
+    Article tags
     :param article:
     :return:
     """
@@ -128,7 +128,7 @@ def load_articletags(article):
 @register.inclusion_tag('blog/tags/sidebar.html')
 def load_sidebar(user, linktype):
     """
-    加载侧边栏
+    Load sidebar
     :return:
     """
     value = cache.get("sidebar" + linktype)
@@ -151,8 +151,8 @@ def load_sidebar(user, linktype):
             Q(show_type=str(linktype)) | Q(show_type=LinkShowType.A))
         commment_list = Comment.objects.filter(is_enable=True).order_by(
             '-id')[:blogsetting.sidebar_comment_count]
-        # 标签云 计算字体大小
-        # 根据总数计算出平均值 大小为 (数目/平均值)*步长
+        # Tag cloud font size calculation
+        # Size = (count / average) * step
         increment = 5
         tags = Tag.objects.all()
         sidebar_tags = None
@@ -188,7 +188,7 @@ def load_sidebar(user, linktype):
 @register.inclusion_tag('blog/tags/article_meta_info.html')
 def load_article_metas(article, user):
     """
-    获得文章meta信息
+    Get article meta information
     :param article:
     :return:
     """
@@ -211,7 +211,7 @@ def load_pagination_info(page_obj, page_type, tag_name):
             previous_url = reverse(
                 'blog:index_page', kwargs={
                     'page': previous_number})
-    if page_type == '分类标签归档':
+    if page_type == 'Category Tag Archive':  # Category Tag Archive
         tag = get_object_or_404(Tag, name=tag_name)
         if page_obj.has_next():
             next_number = page_obj.next_page_number()
@@ -227,7 +227,7 @@ def load_pagination_info(page_obj, page_type, tag_name):
                 kwargs={
                     'page': previous_number,
                     'tag_name': tag.slug})
-    if page_type == '作者文章归档':
+    if page_type == 'Author Article Archive':  # Author Article Archive
         if page_obj.has_next():
             next_number = page_obj.next_page_number()
             next_url = reverse(
@@ -243,7 +243,7 @@ def load_pagination_info(page_obj, page_type, tag_name):
                     'page': previous_number,
                     'author_name': tag_name})
 
-    if page_type == '分类目录归档':
+    if page_type == 'Category Directory Archive':  # Category Directory Archive
         category = get_object_or_404(Category, name=tag_name)
         if page_obj.has_next():
             next_number = page_obj.next_page_number()
@@ -270,9 +270,9 @@ def load_pagination_info(page_obj, page_type, tag_name):
 @register.inclusion_tag('blog/tags/article_info.html')
 def load_article_detail(article, isindex, user):
     """
-    加载文章详情
+    Load article details
     :param article:
-    :param isindex:是否列表页，若是列表页只显示摘要
+    :param isindex: Whether it's a list page, if so, only display excerpt
     :return:
     """
     from djangoblog.utils import get_blog_setting
@@ -290,7 +290,7 @@ def load_article_detail(article, isindex, user):
 # TEMPLATE USE:  {{ email|gravatar_url:150 }}
 @register.filter
 def gravatar_url(email, size=40):
-    """获得gravatar头像"""
+    """Get gravatar avatar"""
     cachekey = 'gravatat/' + email
     url = cache.get(cachekey)
     if url:
@@ -314,7 +314,7 @@ def gravatar_url(email, size=40):
 
 @register.filter
 def gravatar(email, size=40):
-    """获得gravatar头像"""
+    """Get gravatar avatar"""
     url = gravatar_url(email, size)
     return mark_safe(
         '<img src="%s" height="%d" width="%d">' %

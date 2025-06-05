@@ -17,12 +17,12 @@
                 <header class="archive-header">
                     {% if suggestion %}
                         <h2 class="archive-title">
-                            已显示<span style="color: red"> “{{ suggestion }}” </span>的搜索结果。&nbsp;&nbsp;
-                            仍然搜索：<a style="text-transform: none;" href="/search/?q={{ query }}&is_suggest=no">{{ query }}</a> <br>
+                            Search results for <span style="color: red"> “{{ suggestion }}” </span> are displayed.  
+                            Still search: <a style="text-transform: none;" href="/search/?q={{ query }}&is_suggest=no">{{ query }}</a> <br>
                         </h2>
                     {% else %}
                         <h2 class="archive-title">
-                            搜索：<span style="color: red">{{ query }} </span> &nbsp;&nbsp;
+                            Search: <span style="color: red">{{ query }} </span>   
                         </h2>
                     {% endif %}
                 </header><!-- .archive-header -->
@@ -33,34 +33,29 @@
                 {% endfor %}
                 {% if page.has_previous or page.has_next %}
                     <nav id="nav-below" class="navigation" role="navigation">
-                        <h3 class="assistive-text">文章导航</h3>
+                        <h3 class="assistive-text">Article Navigation</h3>
                         {% if page.has_previous %}
                             <div class="nav-previous"><a
-                                    href="?q={{ query }}&amp;page={{ page.previous_page_number }}"><span
-                                    class="meta-nav">&larr;</span> 早期文章</a></div>
+                                    href="?q={{ query }}&page={{ page.previous_page_number }}"><span
+                                    class="meta-nav">←</span> Older Articles</a></div>
                         {% endif %}
                         {% if page.has_next %}
-                            <div class="nav-next"><a href="?q={{ query }}&amp;page={{ page.next_page_number }}">较新文章
+                            <div class="nav-next"><a href="?q={{ query }}&page={{ page.next_page_number }}">Newer Articles
                                 <span
                                         class="meta-nav">→</span></a>
                             </div>
                         {% endif %}
                     </nav><!-- .navigation -->
-
                 {% endif %}
             {% else %}
                 <header class="archive-header">
-
-                    <h1 class="archive-title">哎呀，关键字：<span>{{ query }}</span>没有找到结果，要不换个词再试试？</h1>
+                    <h1 class="archive-title">Oops, the keyword: <span>{{ query }}</span> found no results. Want to try a different term?</h1>
                 </header><!-- .archive-header -->
             {% endif %}
         </div><!-- #content -->
     </div><!-- #primary -->
 {% endblock %}
 
-
 {% block sidebar %}
     {% load_sidebar request.user 'i' %}
 {% endblock %}
-
-

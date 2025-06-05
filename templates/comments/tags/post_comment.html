@@ -1,9 +1,9 @@
 <div id="comments" class="comments-area">
 
     <div id="respond" class="comment-respond">
-        <h3 id="reply-title" class="comment-reply-title">发表评论
+        <h3 id="reply-title" class="comment-reply-title">Post a Comment
             <small><a rel="nofollow" id="cancel-comment-reply-link" href="/wordpress/?p=3786#respond"
-                      style="display:none;">取消回复</a></small>
+                      style="display:none;">Cancel Reply</a></small>
         </h3>
         <form action="{% url 'comments:postcomment' article.pk %}" method="post" id="commentform"
               class="comment-form">{% csrf_token %}
@@ -16,18 +16,16 @@
             {{ form.parent_comment_id }}
             <div class="form-submit">
                 {% if COMMENT_NEED_REVIEW %}
-                    <span class="comment-markdown"> 支持markdown，评论经审核后才会显示。</span>
+                    <span class="comment-markdown">Supports Markdown. Comments will be displayed after review.</span>
                 {% else %}
-                    <span class="comment-markdown"> 支持markdown。</span>
+                    <span class="comment-markdown">Supports Markdown.</span>
                 {% endif %}
-                <input name="submit" type="submit" id="submit" class="submit" value="发表评论"/>
+                <input name="submit" type="submit" id="submit" class="submit" value="Post a Comment"/>
                 <small class="cancel-comment" id="cancel_comment" style="display: none">
-                    <a href="javascript:void(0)" id="cancel-comment-reply-link" onclick="cancel_reply()">取消回复</a>
+                    <a href="javascript:void(0)" id="cancel-comment-reply-link" onclick="cancel_reply()">Cancel Reply</a>
                 </small>
             </div>
         </form>
     </div><!-- #respond -->
 
 </div><!-- #comments .comments-area -->
-
-

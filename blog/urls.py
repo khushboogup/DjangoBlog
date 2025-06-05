@@ -13,6 +13,8 @@ urlpatterns = [
         r'page/<int:page>/',
         views.IndexView.as_view(),
         name='index_page'),
+    
+    
     path(
         r'article/<int:year>/<int:month>/<int:day>/<int:article_id>.html',
         views.ArticleDetailView.as_view(),
@@ -25,6 +27,7 @@ urlpatterns = [
         r'category/<slug:category_name>/<int:page>.html',
         views.CategoryDetailView.as_view(),
         name='category_detail_page'),
+    path('ai-generate/', views.ai_generate_article, name='ai_generate_article'),
     path(
         r'author/<author_name>.html',
         views.AuthorDetailView.as_view(),

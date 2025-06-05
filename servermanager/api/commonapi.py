@@ -22,7 +22,7 @@ class ChatGPT:
             return completion.choices[0].message.content
         except Exception as e:
             logger.error(e)
-            return "服务器出错了"
+            return "Server error"  # 服务器出错了
 
 
 class CommandHandler:
@@ -31,9 +31,9 @@ class CommandHandler:
 
     def run(self, title):
         """
-        运行命令
-        :param title: 命令
-        :return: 返回命令执行结果
+        Run command
+        :param title: Command
+        :return: Return the result of the command execution
         """
         cmd = list(
             filter(
@@ -42,14 +42,14 @@ class CommandHandler:
         if cmd:
             return self.__run_command__(cmd[0].command)
         else:
-            return "未找到相关命令，请输入hepme获得帮助。"
+            return "No related command found, please type 'helpme' for assistance."  # 未找到相关命令，请输入hepme获得帮助。
 
     def __run_command__(self, cmd):
         try:
             res = os.popen(cmd).read()
             return res
         except BaseException:
-            return '命令执行出错!'
+            return 'Command execution failed!'  # 命令执行出错!
 
     def get_help(self):
         rsp = ''
@@ -60,5 +60,5 @@ class CommandHandler:
 
 if __name__ == '__main__':
     chatbot = ChatGPT()
-    prompt = "写一篇1000字关于AI的论文"
+    prompt = "Write a 1000-word essay on AI"  # 写一篇1000字关于AI的论文
     print(chatbot.chat(prompt))

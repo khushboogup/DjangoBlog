@@ -62,6 +62,6 @@ class OAuthConfig(models.Model):
         return self.type
 
     class Meta:
-        verbose_name = 'oauth配置'
+        verbose_name = 'oauth'
         verbose_name_plural = verbose_name
         ordering = ['-creation_time']

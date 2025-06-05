@@ -10,8 +10,8 @@ from djangoblog.utils import CommonMarkdown
 class DjangoBlogFeed(Feed):
     feed_type = Rss201rev2Feed
 
-    description = '大巧无工,重剑无锋.'
-    title = "且听风吟 大巧无工,重剑无锋. "
+    description = 'Great skill appears clumsy, a heavy sword has no edge.'
+    title = "Listening to the Wind - Great skill appears clumsy, a heavy sword has no edge."
     link = "/feed/"
 
     def author_name(self):
@@ -31,10 +31,10 @@ class DjangoBlogFeed(Feed):
 
     def feed_copyright(self):
         now = timezone.now()
-        return "Copyright© {year} 且听风吟".format(year=now.year)
+        return "Copyright© {year} Listening to the Wind".format(year=now.year)
 
     def item_link(self, item):
         return item.get_absolute_url()
 
     def item_guid(self, item):
-        return
+        return item.get_absolute_url()

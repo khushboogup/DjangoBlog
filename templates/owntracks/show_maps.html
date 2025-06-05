@@ -23,7 +23,7 @@
             font-size: 14px;
         }
     </style>
-    <title>运动轨迹</title>
+    <title>Motion Trajectory</title>
 </head>
 
 <body>
@@ -32,7 +32,7 @@
 <!-- UI组件库 1.0 -->
 <script src="//webapi.amap.com/ui/1.0/main.js?v=1.0.11"></script>
 <script type="text/javascript">
-    //创建地图
+    // Create map
     var map = new AMap.Map('container', {
         zoom: 4
     });
@@ -40,11 +40,11 @@
     AMapUI.load(['ui/misc/PathSimplifier', 'lib/$'], function (PathSimplifier, $) {
 
         if (!PathSimplifier.supportCanvas) {
-            alert('当前环境不支持 Canvas！');
+            alert('The current environment does not support Canvas!');
             return;
         }
 
-        //just some colors
+        // Just some colors
         var colors = [
             "#3366cc", "#dc3912", "#ff9900", "#109618", "#990099", "#0099c6", "#dd4477", "#66aa00",
             "#b82e2e", "#316395", "#994499", "#22aa99", "#aaaa11", "#6633cc", "#e67300", "#8b0707",
@@ -54,27 +54,24 @@
         var pathSimplifierIns = new PathSimplifier({
             zIndex: 100,
             //autoSetFitView:false,
-            map: map, //所属的地图实例
+            map: map, // The associated map instance
 
             getPath: function (pathData, pathIndex) {
-
                 return pathData.path;
             },
             getHoverTitle: function (pathData, pathIndex, pointIndex) {
-
                 if (pointIndex >= 0) {
-                    //point
-                    return pathData.name + '，点：' + pointIndex + '/' + pathData.path.length;
+                    // Point
+                    return pathData.name + ', Point: ' + pointIndex + '/' + pathData.path.length;
                 }
 
-                return pathData.name + '，点数量' + pathData.path.length;
+                return pathData.name + ', Number of Points: ' + pathData.path.length;
             },
             renderOptions: {
                 pathLineStyle: {
                     dirArrowStyle: true
                 },
                 getPathStyle: function (pathItem, zoom) {
-
                     var color = colors[pathItem.pathIndex % colors.length],
                         lineWidth = Math.round(4 * Math.pow(1.1, zoom - 3));
 
@@ -96,12 +93,11 @@
 
         window.pathSimplifierIns = pathSimplifierIns;
 
-        $('<div id="loadingTip">加载数据，请稍候...</div>').appendTo(document.body);
+        $('<div id="loadingTip">Loading data, please wait...</div>').appendTo(document.body);
 
         $.getJSON('/owntracks/get_datas?date={{ date }}', function (d) {
-
             if (!d || !d.length) {
-                $("#loadingTip").text("没有数据...")
+                $("#loadingTip").text("No data...")
                 return;
             }
             $('#loadingTip').remove();
@@ -114,7 +110,7 @@
             }
 
             function onerror(e) {
-                alert('图片加载失败！');
+                alert('Image loading failed!');
             }
 
             d.forEach(function (item, index) {
@@ -124,12 +120,9 @@
                 });
 
                 navg1.start();
-            })
-
+            });
         });
     });
 </script>
 </body>
-
-
 </html>

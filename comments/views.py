@@ -1,4 +1,3 @@
-# Create your views here.
 from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
@@ -36,14 +35,14 @@ class CommentPostView(FormView):
         })
 
     def form_valid(self, form):
-        """提交的数据验证合法后的逻辑"""
+        """Logic after the submitted data is validated successfully"""
         user = self.request.user
         author = BlogUser.objects.get(pk=user.pk)
         article_id = self.kwargs['article_id']
         article = get_object_or_404(Article, pk=article_id)
 
         if article.comment_status == 'c' or article.status == 'c':
-            raise ValidationError("该文章评论已关闭.")
+            raise ValidationError("Comments on this article have been closed.")
         comment = form.save(False)
         comment.article = article
         from djangoblog.utils import get_blog_setting

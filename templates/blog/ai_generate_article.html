@@ -1,0 +1,39 @@
+{% extends 'blog/base.html' %}
+{% load i18n %}
+
+{% block content %}
+  <div class="container">
+    <h2>{% trans "Generate Article with AI" %}</h2>
+    {% if messages %}
+      <div class="alert alert-info">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% if form.errors %}
+      <div class="alert alert-danger">
+        <ul>
+          {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+              <li>{{ field }}: {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" name="action" value="preview" class="btn btn-secondary">{% trans "Preview" %}</button>
+      <button type="submit" name="action" value="save" class="btn btn-primary">{% trans "Generate and Save" %}</button>
+    </form>
+    {% if preview_content %}
+      <h3>{% trans "Preview" %}</h3>
+      <h4>{{ preview_title }}</h4>
+      <div class="preview-content">
+        {{ preview_content|safe }}
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

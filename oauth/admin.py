@@ -45,8 +45,8 @@ class OAuthUserAdmin(admin.ModelAdmin):
             u'<img src="%s" style="width:50px;height:50px"></img>' %
             (img))
 
-    link_to_usermodel.short_description = '用户'
-    show_user_image.short_description = '用户头像'
+    link_to_usermodel.short_description = 'User'
+    show_user_image.short_description = 'User Avatar'
 
 
 class OAuthConfigAdmin(admin.ModelAdmin):

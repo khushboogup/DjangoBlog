@@ -1,0 +1,28 @@
+{% extends 'share_layout/base.html' %}
+{% load i18n %}
+
+{% block header %}
+    <title>{% trans "Submit Article" %} | {{ SITE_NAME }}</title>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>{% trans "Submit a New Article" %}</h2>
+
+    {% if form.errors %}
+        <div class="error">
+            <p>{% trans "Please correct the errors below." %}</p>
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn">{% trans "Submit" %}</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block sidebar %}
+    {% include 'share_layout/sidebar.html' %}
+{% endblock %}

@@ -3,7 +3,7 @@ from django.forms import widgets
 
 
 class RequireEmailForm(forms.Form):
-    email = forms.EmailField(label='电子邮箱', required=True)
+    email = forms.EmailField(label='Email', required=True)  # 电子邮箱
     oauthid = forms.IntegerField(widget=forms.HiddenInput, required=False)
 
     def __init__(self, *args, **kwargs):

@@ -9,7 +9,7 @@ from blog.models import Article
 # Create your models here.
 
 class Comment(models.Model):
-    body = models.TextField('正文', max_length=300)
+    body = models.TextField(_('body'), max_length=300)  # 正文
     creation_time = models.DateTimeField(_('creation time'), default=now)
     last_modify_time = models.DateTimeField(_('last modify time'), default=now)
     author = models.ForeignKey(

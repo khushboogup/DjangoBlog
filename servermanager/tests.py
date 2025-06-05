@@ -17,7 +17,7 @@ class ServerManagerTest(TestCase):
         self.factory = RequestFactory()
 
     def test_chat_gpt(self):
-        content = ChatGPT.chat("你好")
+        content = ChatGPT.chat("Hello")  # 你好
         self.assertIsNotNone(content)
 
     def test_validate_comment(self):
@@ -46,7 +46,7 @@ class ServerManagerTest(TestCase):
         rsp = category(None, None)
         self.assertIsNotNone(rsp)
         rsp = recents(None, None)
-        self.assertTrue(rsp != '暂时还没有文章')
+        self.assertTrue(rsp != 'No articles yet')  # 暂时还没有文章
 
         cmd = commands()
         cmd.title = "test"
@@ -68,7 +68,7 @@ class ServerManagerTest(TestCase):
         msghandler.handler()
         s.content = 'idcard:12321233'
         msghandler.handler()
-        s.content = 'weather:上海'
+        s.content = 'weather:Shanghai'  # 上海
         msghandler.handler()
         s.content = 'admin'
         msghandler.handler()

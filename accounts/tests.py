@@ -144,13 +144,13 @@ class AccountTest(TestCase):
             path=reverse("account:forget_password_code"),
             data=dict()
         )
-        self.assertEqual(resp.content.decode("utf-8"), "错误的邮箱")
+        self.assertEqual(resp.content.decode("utf-8"), "Invalid Email")
 
         resp = self.client.post(
             path=reverse("account:forget_password_code"),
             data=dict(email="admin@com")
         )
-        self.assertEqual(resp.content.decode("utf-8"), "错误的邮箱")
+        self.assertEqual(resp.content.decode("utf-8"), "Invalid Email")
 
     def test_forget_password_email_success(self):
         code = generate_code()
@@ -167,7 +167,7 @@ class AccountTest(TestCase):
         )
         self.assertEqual(resp.status_code, 302)
 
-        # 验证用户密码是否修改成功
+        # Verify if the user password was successfully changed
         blog_user = BlogUser.objects.filter(
             email=self.blog_user.email,
         ).first()  # type: BlogUser
@@ -188,7 +188,6 @@ class AccountTest(TestCase):
 
         self.assertEqual(resp.status_code, 200)
 
-
     def test_forget_password_email_code_error(self):
         code = generate_code()
         utils.set_code(self.blog_user.email, code)
@@ -204,4 +203,3 @@ class AccountTest(TestCase):
         )
 
         self.assertEqual(resp.status_code, 200)
-

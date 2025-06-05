@@ -55,7 +55,7 @@ class ElasticSearchBackend(BaseSearchBackend):
 
     @staticmethod
     def get_suggestion(query: str) -> str:
-        """获取推荐词, 如果没有找到添加原搜索词"""
+        """Get suggested terms. If none found, add the original search term."""
 
         search = ArticleDocument.search() \
             .query("match", body=query) \
@@ -78,7 +78,7 @@ class ElasticSearchBackend(BaseSearchBackend):
         start_offset = kwargs.get('start_offset')
         end_offset = kwargs.get('end_offset')
 
-        # 推荐词搜索
+        # Suggestion-based search
         if getattr(self, "is_suggest", None):
             suggestion = self.get_suggestion(query_string)
         else:
@@ -172,7 +172,7 @@ class ElasticSearchQuery(BaseSearchQuery):
 class ElasticSearchModelSearchForm(ModelSearchForm):
 
     def search(self):
-        # 是否建议搜索
+        # Whether to use search suggestion
         self.searchqueryset.query.backend.is_suggest = self.data.get("is_suggest") != "no"
         sqs = super().search()
         return sqs

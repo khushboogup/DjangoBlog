@@ -14,19 +14,20 @@ logger = logging.getLogger(__name__)
 
 class OAuthAccessTokenException(Exception):
     '''
-    oauth授权失败异常
+    OAuth authorization failure exception
     '''
 
 
 class BaseOauthManager(metaclass=ABCMeta):
-    """获取用户授权"""
+    """Get user authorization"""
     AUTH_URL = None
-    """获取token"""
+    """Get token"""
     TOKEN_URL = None
-    """获取用户信息"""
+    """Get user information"""
     API_URL = None
-    '''icon图标名'''
+    '''Icon name'''
     ICON_NAME = None
+
 
     def __init__(self, access_token=None, openid=None):
         self.access_token = access_token

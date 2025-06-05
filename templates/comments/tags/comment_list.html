@@ -1,4 +1,4 @@
-<dev>
+<div>
     <section id="comments" class="themeform">
         {% load blog_tags %}
         {% load comments_tags %}
@@ -6,33 +6,30 @@
 
         <ul class="comment-tabs group">
             <li class="active"><a href="#commentlist-container"><i
-                    class="fa fa-comments-o"></i>评论<span>{{ comment_count }}</span></a></li>
-
+                    class="fa fa-comments-o"></i>Comments<span>{{ comment_count }}</span></a></li>
         </ul>
         {% if article_comments %}
             <div id="commentlist-container" class="comment-tab" style="display: block;">
                 <ol class="commentlist">
                     {#                    {% query article_comments parent_comment=None as parent_comments %}#}
                     {% for comment_item in p_comments %}
-
                         {% with 0 as depth %}
                             {% include "comments/tags/comment_item_tree.html" %}
                         {% endwith %}
                     {% endfor %}
-
                 </ol><!--/.commentlist-->
                 <div class="navigation">
                     <nav class="nav-single">
                         {% if comment_prev_page_url %}
                             <div class="nav-previous">
-                        <span><a href="{{ comment_prev_page_url }}" rel="prev"><span
-                                class="meta-nav">←</span> 上一页</a></span>
+                                <span><a href="{{ comment_prev_page_url }}" rel="prev"><span
+                                        class="meta-nav">←</span> Previous Page</a></span>
                             </div>
                         {% endif %}
                         {% if comment_next_page_url %}
                             <div class="nav-next">
-                        <span><a href="{{ comment_next_page_url }}" rel="next">下一页 <span
-                                class="meta-nav">→</span></a></span>
+                                <span><a href="{{ comment_next_page_url }}" rel="next">Next Page <span
+                                        class="meta-nav">→</span></a></span>
                             </div>
                         {% endif %}
                     </nav>
@@ -41,5 +38,4 @@
             </div>
         {% endif %}
     </section>
-
-</dev>
+</div>

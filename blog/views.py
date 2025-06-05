@@ -1,12 +1,11 @@
 import logging
 import os
 import uuid
-
+from blog.forms import ArticleForm
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseForbidden
-from django.shortcuts import get_object_or_404
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -14,55 +13,116 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 from haystack.views import SearchView
-
+from django.shortcuts import render, redirect
 from blog.models import Article, Category, LinkShowType, Links, Tag
 from comments.forms import CommentForm
 from djangoblog.utils import cache, get_blog_setting, get_sha256
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 
 logger = logging.getLogger(__name__)
 
 
+
+
+# views.py
+@login_required
+def ai_generate_article(request):
+    """View to handle AI-generated article creation with preview option."""
+    if request.method == 'POST':
+        form = ArticleForm(request.POST)
+        action = request.POST.get('action')  # 'preview' or 'save'
+
+        logger.debug(f"Form submitted with action: {action}, data: {request.POST}")
+
+        if form.is_valid():
+            try:
+                article = form.save(commit=False)
+                prompt = form.cleaned_data.get('prompt')
+
+                if not prompt:
+                    messages.error(request, _('Please provide a prompt for AI generation.'))
+                    logger.warning("No prompt provided in AI article generation.")
+                    return render(request, 'blog/ai_generate_article.html', {'form': form})
+
+                logger.debug(f"Generating content for prompt: {prompt}")
+                content = article.generate_content(prompt)
+                if not content:
+                    messages.error(request, _('Failed to generate article content. Please try again.'))
+                    logger.error("Failed to generate article content for prompt: %s", prompt)
+                    return render(request, 'blog/ai_generate_article.html', {'form': form})
+
+                if action == 'preview':
+                    logger.info(f"Previewing article with title: {form.cleaned_data.get('title')}")
+                    return render(request, 'blog/ai_generate_article.html', {
+                        'form': form,
+                        'preview_content': content,
+                        'preview_title': form.cleaned_data.get('title')
+                    })
+
+                article.body = content
+                article.author = request.user
+                # Set default category if not provided
+                if not article.category:
+                    article.category = Category.objects.first() or Category.objects.create(name="General", slug="general")
+                article.save()
+                form.save_m2m()  # Save many-to-many fields (e.g., tags)
+                cache.clear()
+                logger.info(f"AI-generated article created: {article.title} (ID: {article.id})")
+                messages.success(request, _('Article successfully generated and saved!'))
+                return redirect(article.get_absolute_url())
+
+            except Exception as e:
+                logger.error(f"Error in AI article generation: {e}", exc_info=True)
+                messages.error(request, _('An error occurred while generating the article: ') + str(e))
+        else:
+            logger.warning(f"Form validation failed: {form.errors}")
+            messages.error(request, _('Please correct the form errors: ') + str(form.errors))
+    else:
+        form = ArticleForm()
+
+    return render(request, 'blog/ai_generate_article.html', {'form': form})
+
+
 class ArticleListView(ListView):
-    # template_name属性用于指定使用哪个模板进行渲染
+    # template_name specifies which template to use for rendering
     template_name = 'blog/article_index.html'
-
-    # context_object_name属性用于给上下文变量取名（在模板中使用该名字）
     context_object_name = 'article_list'
-
-    # 页面类型，分类目录或标签列表等
     page_type = ''
     paginate_by = settings.PAGINATE_BY
     page_kwarg = 'page'
     link_type = LinkShowType.L
 
     def get_view_cache_key(self):
-        return self.request.get['pages']
+        return self.request.GET.get(self.page_kwarg, '1')  # Fixed: Use GET and page_kwarg
 
     @property
     def page_number(self):
         page_kwarg = self.page_kwarg
-        page = self.kwargs.get(
-            page_kwarg) or self.request.GET.get(page_kwarg) or 1
-        return page
+        page = self.kwargs.get(page_kwarg) or self.request.GET.get(page_kwarg) or '1'
+        try:
+            return int(page)
+        except ValueError:
+            return 1
 
     def get_queryset_cache_key(self):
         """
-        子类重写.获得queryset的缓存key
+        Subclasses should override this to generate cache key for queryset.
         """
         raise NotImplementedError()
 
     def get_queryset_data(self):
         """
-        子类重写.获取queryset的数据
+        Subclasses should override this to fetch the queryset data.
         """
         raise NotImplementedError()
 
     def get_queryset_from_cache(self, cache_key):
-        '''
-        缓存页面数据
-        :param cache_key: 缓存key
+        """
+        Cache page data
+        :param cache_key: cache key
         :return:
-        '''
+        """
         value = cache.get(cache_key)
         if value:
             logger.info('get view cache.key:{key}'.format(key=cache_key))
@@ -74,10 +134,10 @@ class ArticleListView(ListView):
             return article_list
 
     def get_queryset(self):
-        '''
-        重写默认，从缓存获取数据
+        """
+        Override default method to get data from cache
         :return:
-        '''
+        """
         key = self.get_queryset_cache_key()
         value = self.get_queryset_from_cache(key)
         return value
@@ -85,13 +145,12 @@ class ArticleListView(ListView):
     def get_context_data(self, **kwargs):
         kwargs['linktype'] = self.link_type
         return super(ArticleListView, self).get_context_data(**kwargs)
-
-
+   
 class IndexView(ArticleListView):
-    '''
-    首页
-    '''
-    # 友情链接类型
+    """
+    Homepage
+    """
+    # Friend link type
     link_type = LinkShowType.I
 
     def get_queryset_data(self):
@@ -104,9 +163,9 @@ class IndexView(ArticleListView):
 
 
 class ArticleDetailView(DetailView):
-    '''
-    文章详情页面
-    '''
+    """
+    Article detail page
+    """
     template_name = 'blog/article_detail.html'
     model = Article
     pk_url_kwarg = 'article_id'
@@ -120,7 +179,6 @@ class ArticleDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         comment_form = CommentForm()
-
         article_comments = self.object.comment_list()
         parent_comments = article_comments.filter(parent_comment=None)
         blog_setting = get_blog_setting()
@@ -140,17 +198,13 @@ class ArticleDetailView(DetailView):
         prev_page = p_comments.previous_page_number() if p_comments.has_previous() else None
 
         if next_page:
-            kwargs[
-                'comment_next_page_url'] = self.object.get_absolute_url() + f'?comment_page={next_page}#commentlist-container'
+            kwargs['comment_next_page_url'] = self.object.get_absolute_url() + f'?comment_page={next_page}#commentlist-container'
         if prev_page:
-            kwargs[
-                'comment_prev_page_url'] = self.object.get_absolute_url() + f'?comment_page={prev_page}#commentlist-container'
+            kwargs['comment_prev_page_url'] = self.object.get_absolute_url() + f'?comment_page={prev_page}#commentlist-container'
         kwargs['form'] = comment_form
         kwargs['article_comments'] = article_comments
         kwargs['p_comments'] = p_comments
-        kwargs['comment_count'] = len(
-            article_comments) if article_comments else 0
-
+        kwargs['comment_count'] = len(article_comments) if article_comments else 0
         kwargs['next_article'] = self.object.next_article
         kwargs['prev_article'] = self.object.prev_article
 
@@ -158,21 +212,18 @@ class ArticleDetailView(DetailView):
 
 
 class CategoryDetailView(ArticleListView):
-    '''
-    分类目录列表
-    '''
-    page_type = "分类目录归档"
+    """
+    Category list
+    """
+    page_type = "Category Archive"
 
     def get_queryset_data(self):
         slug = self.kwargs['category_name']
         category = get_object_or_404(Category, slug=slug)
-
         categoryname = category.name
         self.categoryname = categoryname
-        categorynames = list(
-            map(lambda c: c.name, category.get_sub_categorys()))
-        article_list = Article.objects.filter(
-            category__name__in=categorynames, status='p')
+        categorynames = list(map(lambda c: c.name, category.get_sub_categorys()))
+        article_list = Article.objects.filter(category__name__in=categorynames, status='p')
         return article_list
 
     def get_queryset_cache_key(self):
@@ -180,12 +231,10 @@ class CategoryDetailView(ArticleListView):
         category = get_object_or_404(Category, slug=slug)
         categoryname = category.name
         self.categoryname = categoryname
-        cache_key = 'category_list_{categoryname}_{page}'.format(
-            categoryname=categoryname, page=self.page_number)
+        cache_key = 'category_list_{categoryname}_{page}'.format(categoryname=categoryname, page=self.page_number)
         return cache_key
 
     def get_context_data(self, **kwargs):
-
         categoryname = self.categoryname
         try:
             categoryname = categoryname.split('/')[-1]
@@ -197,22 +246,20 @@ class CategoryDetailView(ArticleListView):
 
 
 class AuthorDetailView(ArticleListView):
-    '''
-    作者详情页
-    '''
-    page_type = '作者文章归档'
+    """
+    Author's articles
+    """
+    page_type = 'Author Article Archive'
 
     def get_queryset_cache_key(self):
         from uuslug import slugify
         author_name = slugify(self.kwargs['author_name'])
-        cache_key = 'author_{author_name}_{page}'.format(
-            author_name=author_name, page=self.page_number)
+        cache_key = 'author_{author_name}_{page}'.format(author_name=author_name, page=self.page_number)
         return cache_key
 
     def get_queryset_data(self):
         author_name = self.kwargs['author_name']
-        article_list = Article.objects.filter(
-            author__username=author_name, type='a', status='p')
+        article_list = Article.objects.filter(author__username=author_name, type='a', status='p')
         return article_list
 
     def get_context_data(self, **kwargs):
@@ -223,18 +270,17 @@ class AuthorDetailView(ArticleListView):
 
 
 class TagDetailView(ArticleListView):
-    '''
-    标签列表页面
-    '''
-    page_type = '分类标签归档'
+    """
+    Tag archive page
+    """
+    page_type = 'Tag Archive'
 
     def get_queryset_data(self):
         slug = self.kwargs['tag_name']
         tag = get_object_or_404(Tag, slug=slug)
         tag_name = tag.name
         self.name = tag_name
-        article_list = Article.objects.filter(
-            tags__name=tag_name, type='a', status='p')
+        article_list = Article.objects.filter(tags__name=tag_name, type='a', status='p')
         return article_list
 
     def get_queryset_cache_key(self):
@@ -242,12 +288,10 @@ class TagDetailView(ArticleListView):
         tag = get_object_or_404(Tag, slug=slug)
         tag_name = tag.name
         self.name = tag_name
-        cache_key = 'tag_{tag_name}_{page}'.format(
-            tag_name=tag_name, page=self.page_number)
+        cache_key = 'tag_{tag_name}_{page}'.format(tag_name=tag_name, page=self.page_number)
         return cache_key
 
     def get_context_data(self, **kwargs):
-        # tag_name = self.kwargs['tag_name']
         tag_name = self.name
         kwargs['page_type'] = TagDetailView.page_type
         kwargs['tag_name'] = tag_name
@@ -255,10 +299,10 @@ class TagDetailView(ArticleListView):
 
 
 class ArchivesView(ArticleListView):
-    '''
-    文章归档页面
-    '''
-    page_type = '文章归档'
+    """
+    Article archive page
+    """
+    page_type = 'Article Archive'
     paginate_by = None
     page_kwarg = None
     template_name = 'blog/article_archives.html'
@@ -292,14 +336,13 @@ class EsSearchView(SearchView):
         if hasattr(self.results, "query") and self.results.query.backend.include_spelling:
             context["suggestion"] = self.results.query.get_spelling_suggestion()
         context.update(self.extra_context())
-
         return context
 
 
 @csrf_exempt
 def fileupload(request):
     """
-    该方法需自己写调用端来上传图片，该方法仅提供图床功能
+    This method needs a custom client to upload files. It only provides image hosting functionality.
     :param request:
     :return:
     """
@@ -331,15 +374,11 @@ def fileupload(request):
             url = static(savepath)
             response.append(url)
         return HttpResponse(response)
-
     else:
         return HttpResponse("only for post")
 
 
-def page_not_found_view(
-        request,
-        exception,
-        template_name='blog/error_page.html'):
+def page_not_found_view(request, exception, template_name='blog/error_page.html'):
     if exception:
         logger.error(exception)
     url = request.get_full_path()
@@ -358,16 +397,14 @@ def server_error_view(request, template_name='blog/error_page.html'):
                   status=500)
 
 
-def permission_denied_view(
-        request,
-        exception,
-        template_name='blog/error_page.html'):
+def permission_denied_view(request, exception, template_name='blog/error_page.html'):
     if exception:
         logger.error(exception)
-    return render(
-        request, template_name, {
-            'message': _('Sorry, you do not have permission to access this page?'),
-            'statuscode': '403'}, status=403)
+    return render(request,
+                  template_name,
+                  {'message': _('Sorry, you do not have permission to access this page?'),
+                   'statuscode': '403'},
+                  status=403)
 
 
 def clean_cache_view(request):

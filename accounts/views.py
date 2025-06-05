@@ -55,24 +55,23 @@ class RegisterView(FormView):
                 site=site, path=path, id=user.id, sign=sign)
 
             content = """
-                            <p>请点击下面链接验证您的邮箱</p>
+                            <p>Please click the link below to verify your email</p>
 
                             <a href="{url}" rel="bookmark">{url}</a>
 
-                            再次感谢您！
+                            Thank you again!
                             <br />
-                            如果上面链接无法打开，请将此链接复制至浏览器。
+                            If the above link does not open, please copy it to your browser.
                             {url}
                             """.format(url=url)
             send_email(
                 emailto=[
                     user.email,
                 ],
-                title='验证您的电子邮箱',
+                title='Verify Your Email',
                 content=content)
 
-            url = reverse('accounts:result') + \
-                  '?type=register&id=' + str(user.id)
+            url = reverse('accounts:result') + '?type=register&id=' + str(user.id)
             return HttpResponseRedirect(url)
         else:
             return self.render_to_response({
@@ -98,13 +97,12 @@ class LoginView(FormView):
     template_name = 'account/login.html'
     success_url = '/'
     redirect_field_name = REDIRECT_FIELD_NAME
-    login_ttl = 2626560  # 一个月的时间
+    login_ttl = 2626560  # One month in seconds
 
     @method_decorator(sensitive_post_parameters('password'))
     @method_decorator(csrf_protect)
     @method_decorator(never_cache)
     def dispatch(self, request, *args, **kwargs):
-
         return super(LoginView, self).dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -112,7 +110,6 @@ class LoginView(FormView):
         if redirect_to is None:
             redirect_to = '/'
         kwargs['redirect_to'] = redirect_to
-
         return super(LoginView, self).get_context_data(**kwargs)
 
     def form_valid(self, form):
@@ -126,18 +123,15 @@ class LoginView(FormView):
             if self.request.POST.get("remember"):
                 self.request.session.set_expiry(self.login_ttl)
             return super(LoginView, self).form_valid(form)
-            # return HttpResponseRedirect('/')
         else:
             return self.render_to_response({
                 'form': form
             })
 
     def get_success_url(self):
-
         redirect_to = self.request.POST.get(self.redirect_field_name)
         if not url_has_allowed_host_and_scheme(
-                url=redirect_to, allowed_hosts=[
-                    self.request.get_host()]):
+                url=redirect_to, allowed_hosts=[self.request.get_host()]):
             redirect_to = self.success_url
         return redirect_to
 
@@ -153,9 +147,9 @@ def account_result(request):
     if type and type in ['register', 'validation']:
         if type == 'register':
             content = '''
-    恭喜您注册成功，一封验证邮件已经发送到您的邮箱，请验证您的邮箱后登录本站。
+    Congratulations on your successful registration. A verification email has been sent to your inbox. Please verify your email before logging in.
     '''
-            title = '注册成功'
+            title = 'Registration Successful'
         else:
             c_sign = get_sha256(get_sha256(settings.SECRET_KEY + str(user.id)))
             sign = request.GET.get('sign')
@@ -164,9 +158,9 @@ def account_result(request):
             user.is_active = True
             user.save()
             content = '''
-            恭喜您已经成功的完成邮箱验证，您现在可以使用您的账号来登录本站。
+            Congratulations! Your email has been successfully verified. You can now log in with your account.
             '''
-            title = '验证成功'
+            title = 'Verification Successful'
         return render(request, 'account/result.html', {
             'title': title,
             'content': content
@@ -194,7 +188,7 @@ class ForgetPasswordEmailCode(View):
     def post(self, request: HttpRequest):
         form = ForgetPasswordCodeForm(request.POST)
         if not form.is_valid():
-            return HttpResponse("错误的邮箱")
+            return HttpResponse("Invalid email")
         to_email = form.cleaned_data["email"]
 
         code = generate_code()
